@@ -1,23 +1,27 @@
-name: 'The name of your action here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'Cherry-pick PR'
+description: 'Cherry-pick the PR'
+author: '134130'
 
 # Add your action's branding here. This will appear on the GitHub Marketplace.
 branding:
-  icon: 'heart'
+  icon: 'git-pull-request'
   color: 'red'
 
 # Define your inputs here.
 inputs:
-  milliseconds:
-    description: 'Your input description here'
+  pr:
+    description: 'The PR number which you want to cherry-pick'
     required: true
-    default: '1000'
+  onto:
+    description: 'The target branch which you want to base on'
+    required: true
+  token:
+    description: 'The GitHub token'
+    required: true
+    default: ${{ secrets.GITHUB_TOKEN }}
 
 # Define your outputs here.
-outputs:
-  time:
-    description: 'Your output description here'
+outputs: {}
 
 runs:
   using: node20
