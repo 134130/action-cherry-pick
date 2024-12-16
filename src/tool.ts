@@ -3,12 +3,22 @@ import * as core from '@actions/core'
 
 import os from 'os'
 
+function getOsArch(): string {
+  const arch = os.arch()
+  switch (arch) {
+    case 'x64':
+      return 'amd64'
+    default:
+      return arch
+  }
+}
+
 export async function getTool(
   toolName: string,
   version: string
 ): Promise<string> {
   const osPlat: string = os.platform()
-  const osArch: string = os.arch()
+  const osArch: string = getOsArch()
 
   // check cache
   const toolPath = tc.find(toolName, version)

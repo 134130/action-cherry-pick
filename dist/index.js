@@ -28368,9 +28368,18 @@ exports.getTool = getTool;
 const tc = __importStar(__nccwpck_require__(3472));
 const core = __importStar(__nccwpck_require__(7484));
 const os_1 = __importDefault(__nccwpck_require__(857));
+function getOsArch() {
+    const arch = os_1.default.arch();
+    switch (arch) {
+        case 'x64':
+            return 'amd64';
+        default:
+            return arch;
+    }
+}
 async function getTool(toolName, version) {
     const osPlat = os_1.default.platform();
-    const osArch = os_1.default.arch();
+    const osArch = getOsArch();
     // check cache
     const toolPath = tc.find(toolName, version);
     if (toolPath) {
