@@ -28295,22 +28295,22 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = run;
 const core = __importStar(__nccwpck_require__(7484));
-const child_process_1 = __importDefault(__nccwpck_require__(5317));
+const io = __importStar(__nccwpck_require__(4994));
 const tool = __importStar(__nccwpck_require__(5325));
+const exec = __importStar(__nccwpck_require__(5236));
 async function run() {
     try {
         const pr = Number.parseInt(core.getInput('pr', { required: true }));
         const onto = core.getInput('onto', { required: true });
         core.info(`PR: ${pr}`);
         core.info(`Onto: ${onto}`);
-        const ghCherryPick = await tool.getTool('gh-cherry-pick', '2.0.0');
-        child_process_1.default.execSync(`${ghCherryPick} -pr ${pr} -onto ${onto}`);
+        const ghCherryPick = await tool.getTool('gh-cherry-pick', '1.0.0');
+        core.addPath(ghCherryPick);
+        core.debug(`which gh-cherry-pick: ${await io.which('gh-cherry-pick', true)}`);
+        await exec.exec(`gh-cherry-pick -pr ${pr} -onto ${onto}`);
     }
     catch (error) {
         // Fail the workflow run if an error occurs
@@ -28381,7 +28381,7 @@ async function getTool(toolName, version) {
     const osPlat = os_1.default.platform();
     const osArch = getOsArch();
     // check cache
-    const toolPath = tc.find(toolName, version);
+    const toolPath = tc.find(toolName, version, osArch);
     if (toolPath) {
         core.info(`Found in cache @ ${toolPath}`);
         return toolPath;
@@ -28400,7 +28400,7 @@ async function getTool(toolName, version) {
     }
     core.info(`Successfully extracted ${toolName} to ${extPath}`);
     core.info('Adding to the cache ...');
-    const cachedDir = await tc.cacheDir(extPath, toolName, version);
+    const cachedDir = await tc.cacheDir(extPath, toolName, version, osArch);
     core.info(`Successfully cached ${toolName} to ${cachedDir}`);
     return cachedDir;
 }

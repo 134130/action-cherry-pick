@@ -1,9 +1,8 @@
 import * as core from '@actions/core'
-
-import cp from 'child_process'
+import * as io from '@actions/io'
 
 import * as tool from './tool'
-import path from 'path'
+import * as exec from '@actions/exec'
 
 export async function run(): Promise<void> {
   try {
@@ -13,10 +12,14 @@ export async function run(): Promise<void> {
     core.info(`PR: ${pr}`)
     core.info(`Onto: ${onto}`)
 
-    const ghCherryPickPath = await tool.getTool('gh-cherry-pick', '2.0.0')
-    const ghCherryPick = path.join(ghCherryPickPath, 'gh-cherry-pick')
+    const ghCherryPick = await tool.getTool('gh-cherry-pick', '1.0.0')
+    core.addPath(ghCherryPick)
 
-    cp.execSync(`${ghCherryPick} -pr ${pr} -onto ${onto}`)
+    core.debug(
+      `which gh-cherry-pick: ${await io.which('gh-cherry-pick', true)}`
+    )
+
+    await exec.exec(`gh-cherry-pick -pr ${pr} -onto ${onto}`)
   } catch (error) {
     // Fail the workflow run if an error occurs
     if (error instanceof Error) core.setFailed(error.message)
