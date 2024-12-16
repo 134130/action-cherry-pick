@@ -2,6 +2,8 @@ import * as tc from '@actions/tool-cache'
 import * as core from '@actions/core'
 
 import os from 'os'
+import { exec, execSync } from 'child_process'
+import path from 'path'
 
 function getOsArch(): string {
   const arch = os.arch()
@@ -21,7 +23,7 @@ export async function getTool(
   const osArch: string = getOsArch()
 
   // check cache
-  const toolPath = tc.find(toolName, version)
+  const toolPath = tc.find(toolName, version, osArch)
   if (toolPath) {
     core.info(`Found in cache @ ${toolPath}`)
     return toolPath
@@ -42,8 +44,10 @@ export async function getTool(
   }
   core.info(`Successfully extracted ${toolName} to ${extPath}`)
 
+  extPath = path.join(extPath, `${toolName}-${version}-${osPlat}-${osArch}`)
+
   core.info('Adding to the cache ...')
-  const cachedDir = await tc.cacheDir(extPath, toolName, version)
+  const cachedDir = await tc.cacheDir(extPath, toolName, version, osArch)
   core.info(`Successfully cached ${toolName} to ${cachedDir}`)
 
   return cachedDir

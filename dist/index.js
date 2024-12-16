@@ -28295,14 +28295,12 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = run;
 const core = __importStar(__nccwpck_require__(7484));
-const child_process_1 = __importDefault(__nccwpck_require__(5317));
+const io = __importStar(__nccwpck_require__(4994));
 const tool = __importStar(__nccwpck_require__(5325));
+const exec = __importStar(__nccwpck_require__(5236));
 async function run() {
     try {
         const pr = Number.parseInt(core.getInput('pr', { required: true }));
@@ -28310,7 +28308,9 @@ async function run() {
         core.info(`PR: ${pr}`);
         core.info(`Onto: ${onto}`);
         const ghCherryPick = await tool.getTool('gh-cherry-pick', '2.0.0');
-        child_process_1.default.execSync(`${ghCherryPick} -pr ${pr} -onto ${onto}`);
+        core.addPath(ghCherryPick);
+        core.info(`which gh-cherry-pick: ${await io.which('gh-cherry-pick', true)}`);
+        await exec.exec(`gh-cherry-pick -pr ${pr} -onto ${onto}`);
     }
     catch (error) {
         // Fail the workflow run if an error occurs
@@ -28368,6 +28368,7 @@ exports.getTool = getTool;
 const tc = __importStar(__nccwpck_require__(3472));
 const core = __importStar(__nccwpck_require__(7484));
 const os_1 = __importDefault(__nccwpck_require__(857));
+const path_1 = __importDefault(__nccwpck_require__(6928));
 function getOsArch() {
     const arch = os_1.default.arch();
     switch (arch) {
@@ -28381,7 +28382,7 @@ async function getTool(toolName, version) {
     const osPlat = os_1.default.platform();
     const osArch = getOsArch();
     // check cache
-    const toolPath = tc.find(toolName, version);
+    const toolPath = tc.find(toolName, version, osArch);
     if (toolPath) {
         core.info(`Found in cache @ ${toolPath}`);
         return toolPath;
@@ -28399,8 +28400,9 @@ async function getTool(toolName, version) {
         extPath = await tc.extractTar(downloadPath);
     }
     core.info(`Successfully extracted ${toolName} to ${extPath}`);
+    extPath = path_1.default.join(extPath, `${toolName}-${version}-${osPlat}-${osArch}`);
     core.info('Adding to the cache ...');
-    const cachedDir = await tc.cacheDir(extPath, toolName, version);
+    const cachedDir = await tc.cacheDir(extPath, toolName, version, osArch);
     core.info(`Successfully cached ${toolName} to ${cachedDir}`);
     return cachedDir;
 }
