@@ -2,7 +2,6 @@ import * as tc from '@actions/tool-cache'
 import * as core from '@actions/core'
 
 import os from 'os'
-import path from 'path'
 
 function getOsArch(): string {
   const arch = os.arch()
@@ -42,7 +41,6 @@ export async function getTool(
     extPath = await tc.extractTar(downloadPath)
   }
   core.info(`Successfully extracted ${toolName} to ${extPath}`)
-  extPath = path.join(extPath, toolName)
 
   core.info('Adding to the cache ...')
   const cachedDir = await tc.cacheDir(extPath, toolName, version)

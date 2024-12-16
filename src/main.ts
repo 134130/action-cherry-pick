@@ -3,6 +3,7 @@ import * as core from '@actions/core'
 import cp from 'child_process'
 
 import * as tool from './tool'
+import path from 'path'
 
 export async function run(): Promise<void> {
   try {
@@ -12,7 +13,8 @@ export async function run(): Promise<void> {
     core.info(`PR: ${pr}`)
     core.info(`Onto: ${onto}`)
 
-    const ghCherryPick = await tool.getTool('gh-cherry-pick', '2.0.0')
+    const ghCherryPickPath = await tool.getTool('gh-cherry-pick', '2.0.0')
+    const ghCherryPick = path.join(ghCherryPickPath, 'gh-cherry-pick')
 
     cp.execSync(`${ghCherryPick} -pr ${pr} -onto ${onto}`)
   } catch (error) {
