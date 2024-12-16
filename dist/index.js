@@ -28387,7 +28387,7 @@ async function getTool(toolName, version) {
         return toolPath;
     }
     core.info(`Attempting to download ${toolName} ${version}`);
-    const downloadUrl = `https://github.com/134130/gh-cherry-pick/releases/download/${version}/${toolName}-${version}-${osPlat}-${osArch}.tar.gz`;
+    const downloadUrl = `https://github.com/134130/gh-cherry-pick/releases/download/v${version}/${toolName}-${version}-${osPlat}-${osArch}.tar.gz`;
     core.info(`Acquiring ${toolName} ${version} from ${downloadUrl}`);
     const downloadPath = await tc.downloadTool(downloadUrl);
     core.info(`Extracting ${toolName} ...`);
