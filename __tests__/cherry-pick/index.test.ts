@@ -1,6 +1,5 @@
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
-import * as github from '@actions/github'
 import * as io from '@actions/io'
 import { afterEach, beforeEach } from '@jest/globals'
 import { cherryPick } from '../../src/cherry-pick'

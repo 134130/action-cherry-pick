@@ -3,7 +3,7 @@ import * as exec from '@actions/exec'
 import * as github from '@actions/github'
 import * as io from '@actions/io'
 import { afterEach, beforeEach } from '@jest/globals'
-import * as git from '../../src/git'
+import * as git from '../../src/cherry-pick/git'
 
 const octokit = github.getOctokit(process.env['GH_TOKEN'] || (process.env['GITHUB_TOKEN'] as string))
 

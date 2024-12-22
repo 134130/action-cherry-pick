@@ -1,6 +1,5 @@
 import * as fs from 'fs'
 
-import * as core from '@actions/core'
 import * as github from '@actions/github'
 import { GetResponseDataTypeFromEndpointMethod } from '@octokit/types'
 
