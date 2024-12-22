@@ -42,7 +42,6 @@ export async function fetch(remote: string, refspec: string): Promise<void> {
 
 export async function checkoutNewBranch(newBranch: string, startPoint: string): Promise<void> {
   await exec('git', ['checkout', '--recurse-submodules', '-b', newBranch, startPoint])
-  await exec('git', ['reset', '--hard', startPoint])
 }
 
 export async function inspectPullRequestMergeStrategy(octokit: Octokit, prNumber: number): Promise<'squash' | 'rebase'> {
@@ -87,7 +86,7 @@ export async function getPullRequestDiff(octokit: Octokit, prNumber: number, asP
 export async function getMergeBase(octokit: Octokit, commitA: string, commitB: string): Promise<string> {
   const { data: data } = await octokit.request('GET /repos/{owner}/{repo}/compare/{basehead}', {
     ...github.context.repo,
-    basehead: `${commitA}...${commitB}`,
+    basehead: `${commitA}^..${commitB}`,
     headers: {
       'X-GitHub-Api-Version': '2022-11-28'
     }

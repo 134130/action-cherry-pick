@@ -30002,7 +30002,6 @@ async function fetch(remote, refspec) {
 }
 async function checkoutNewBranch(newBranch, startPoint) {
     await (0, exec_1.exec)('git', ['checkout', '--recurse-submodules', '-b', newBranch, startPoint]);
-    await (0, exec_1.exec)('git', ['reset', '--hard', startPoint]);
 }
 async function inspectPullRequestMergeStrategy(octokit, prNumber) {
     const pull = await getPullRequest(octokit, prNumber);
@@ -30039,7 +30038,7 @@ async function getPullRequestDiff(octokit, prNumber, asPatch) {
 async function getMergeBase(octokit, commitA, commitB) {
     const { data: data } = await octokit.request('GET /repos/{owner}/{repo}/compare/{basehead}', {
         ...github.context.repo,
-        basehead: `${commitA}...${commitB}`,
+        basehead: `${commitA}^..${commitB}`,
         headers: {
             'X-GitHub-Api-Version': '2022-11-28'
         }
@@ -30122,7 +30121,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.cherryPick = cherryPick;
 const core = __importStar(__nccwpck_require__(7484));
 const github = __importStar(__nccwpck_require__(3228));
-const git_1 = __nccwpck_require__(405);
 const git = __importStar(__nccwpck_require__(405));
 const util = __importStar(__nccwpck_require__(7416));
 async function cherryPick(options) {
@@ -30162,10 +30160,6 @@ async function cherryPick(options) {
         mergeStrategy = await git.inspectPullRequestMergeStrategy(octokit, options.pullNumber);
         core.info(`    The merge strategy is determined as '${mergeStrategy}'`);
     });
-    await util.runStep('Fetch the commits between the PR and the target branch', async () => {
-        const mergeBase = await (0, git_1.getMergeBase)(octokit, pull.merge_commit_sha, options.targetBranch);
-        await git.fetch('origin', `${mergeBase}..${pull.merge_commit_sha}`);
-    });
     await util.runStep('Configure git user', async () => {
         let gitUsername;
         let gitEmail;
@@ -30185,6 +30179,7 @@ async function cherryPick(options) {
     const cherryPickBranchName = `cherry-pick-pr-${options.pullNumber}-onto-${options.targetBranch.replace(/[^a-zA-Z0-9-]/g, '-')}-${Date.now()}`;
     await util.runStep('Checkout branch', async () => {
         await git.fetch('origin', options.targetBranch);
+        await git.fetch('origin', pull.base.ref);
         await git.checkoutNewBranch(cherryPickBranchName, `origin/${options.targetBranch}`);
     });
     switch (mergeStrategy) {
@@ -30357,7 +30352,12 @@ const process = __importStar(__nccwpck_require__(1708));
 async function runStep(name, fn) {
     await core.group(`🍒 ${name} ...`, async () => {
         await fn().catch(error => {
-            core.setFailed(error.message);
+            if (error instanceof Error) {
+                core.setFailed(error.message);
+            }
+            else {
+                core.setFailed(String(error));
+            }
             process.exit(1);
         });
     });

@@ -31,7 +31,7 @@ describe('cherry-pick', () => {
     processExitMock = jest.spyOn(process, 'exit').mockImplementation()
 
     await io.rmRF('test-cherry-pick')
-    await exec.exec('git', ['clone', 'https://github.com/134130/test-cherry-pick', '--depth', '1'])
+    await exec.exec('git', ['clone', 'https://github.com/134130/test-cherry-pick'])
     process.chdir('test-cherry-pick')
   })
 
@@ -48,6 +48,9 @@ describe('cherry-pick', () => {
         token: token
       })
     ).resolves.not.toThrow()
+
+    expect(setFailedMock).not.toHaveBeenCalled()
+    expect(processExitMock).not.toHaveBeenCalled()
   })
 
   test('cherryPick rebase merged PR should be success', async () => {
@@ -58,12 +61,15 @@ describe('cherry-pick', () => {
         token: token
       })
     ).resolves.not.toThrow()
+
+    expect(setFailedMock).not.toHaveBeenCalled()
+    expect(processExitMock).not.toHaveBeenCalled()
   })
 
   test('cherryPick that will make conflict PR should be failure', async () => {
     await expect(
       cherryPick({
-        pullNumber: 6,
+        pullNumber: 7,
         targetBranch: 'release/10.0',
         token: token
       })

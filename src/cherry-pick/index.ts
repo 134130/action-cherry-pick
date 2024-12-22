@@ -1,7 +1,6 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import { GetResponseDataTypeFromEndpointMethod } from '@octokit/types'
-import { getMergeBase } from './git'
 
 import { CherryPickOptions, CherryPickResult, MergeStrategy } from './types'
 import * as git from './git'
@@ -54,11 +53,6 @@ export async function cherryPick(options: CherryPickOptions): Promise<CherryPick
     core.info(`    The merge strategy is determined as '${mergeStrategy}'`)
   })
 
-  await util.runStep('Fetch the commits between the PR and the target branch', async () => {
-    const mergeBase = await getMergeBase(octokit, pull.merge_commit_sha as string, options.targetBranch)
-    await git.fetch('origin', `${mergeBase}..${pull.merge_commit_sha}`)
-  })
-
   await util.runStep('Configure git user', async () => {
     let gitUsername: string
     let gitEmail: string
@@ -80,6 +74,7 @@ export async function cherryPick(options: CherryPickOptions): Promise<CherryPick
   const cherryPickBranchName = `cherry-pick-pr-${options.pullNumber}-onto-${options.targetBranch.replace(/[^a-zA-Z0-9-]/g, '-')}-${Date.now()}`
   await util.runStep('Checkout branch', async () => {
     await git.fetch('origin', options.targetBranch)
+    await git.fetch('origin', pull.base.ref)
     await git.checkoutNewBranch(cherryPickBranchName, `origin/${options.targetBranch}`)
   })
 
