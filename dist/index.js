@@ -29968,6 +29968,7 @@ exports.fetch = fetch;
 exports.checkoutNewBranch = checkoutNewBranch;
 exports.inspectPullRequestMergeStrategy = inspectPullRequestMergeStrategy;
 exports.getPullRequestDiff = getPullRequestDiff;
+exports.getMergeBase = getMergeBase;
 exports.disableMergeConflictHint = disableMergeConflictHint;
 exports.applyPatch = applyPatch;
 exports.cherryPick = cherryPick;
@@ -30034,6 +30035,16 @@ async function getPullRequestDiff(octokit, prNumber, asPatch) {
         }
     });
     return diff;
+}
+async function getMergeBase(octokit, commitA, commitB) {
+    const { data: data } = await octokit.request('GET /repos/{owner}/{repo}/compare/{basehead}', {
+        ...github.context.repo,
+        basehead: `${commitA}...${commitB}`,
+        headers: {
+            'X-GitHub-Api-Version': '2022-11-28'
+        }
+    });
+    return data.merge_base_commit.sha;
 }
 async function disableMergeConflictHint() {
     await (0, exec_1.exec)('git', ['config', 'advice.mergeConflict', 'false']);
@@ -30111,6 +30122,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.cherryPick = cherryPick;
 const core = __importStar(__nccwpck_require__(7484));
 const github = __importStar(__nccwpck_require__(3228));
+const git_1 = __nccwpck_require__(405);
 const git = __importStar(__nccwpck_require__(405));
 const util = __importStar(__nccwpck_require__(7416));
 async function cherryPick(options) {
@@ -30140,11 +30152,6 @@ async function cherryPick(options) {
             throw new Error(`PR is not merged. Please merge the PR before running this action.`);
         }
     });
-    const cherryPickBranchName = `cherry-pick-pr-${options.pullNumber}-onto-${options.targetBranch}-${Date.now()}`;
-    await util.runStep('Checkout branch', async () => {
-        await git.fetch('origin', options.targetBranch);
-        await git.checkoutNewBranch(cherryPickBranchName, `origin/${options.targetBranch}`);
-    });
     let mergeStrategy;
     await util.runStep('Determine merge strategy', async () => {
         if (options.mergeStrategy !== undefined) {
@@ -30154,6 +30161,10 @@ async function cherryPick(options) {
         }
         mergeStrategy = await git.inspectPullRequestMergeStrategy(octokit, options.pullNumber);
         core.info(`    The merge strategy is determined as '${mergeStrategy}'`);
+    });
+    await util.runStep('Fetch the commits between the PR and the target branch', async () => {
+        const mergeBase = await (0, git_1.getMergeBase)(octokit, pull.merge_commit_sha, options.targetBranch);
+        await git.fetch('origin', `${mergeBase}..${pull.merge_commit_sha}`);
     });
     await util.runStep('Configure git user', async () => {
         let gitUsername;
@@ -30170,6 +30181,11 @@ async function cherryPick(options) {
         }
         await git.configureGitUser(gitUsername, gitEmail);
         await git.disableMergeConflictHint();
+    });
+    const cherryPickBranchName = `cherry-pick-pr-${options.pullNumber}-onto-${options.targetBranch.replace(/[^a-zA-Z0-9-]/g, '-')}-${Date.now()}`;
+    await util.runStep('Checkout branch', async () => {
+        await git.fetch('origin', options.targetBranch);
+        await git.checkoutNewBranch(cherryPickBranchName, `origin/${options.targetBranch}`);
     });
     switch (mergeStrategy) {
         case 'rebase':
@@ -30192,7 +30208,8 @@ async function cherryPick(options) {
         });
     }
     return {
-        branch: cherryPickBranchName
+        branch: cherryPickBranchName,
+        strategy: mergeStrategy
     };
 }
 

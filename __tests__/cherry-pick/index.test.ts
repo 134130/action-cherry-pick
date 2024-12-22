@@ -31,7 +31,7 @@ describe('cherry-pick', () => {
     processExitMock = jest.spyOn(process, 'exit').mockImplementation()
 
     await io.rmRF('test-cherry-pick')
-    await exec.exec('git', ['clone', 'https://github.com/134130/test-cherry-pick'])
+    await exec.exec('git', ['clone', 'https://github.com/134130/test-cherry-pick', '--depth', '1'])
     process.chdir('test-cherry-pick')
   })
 

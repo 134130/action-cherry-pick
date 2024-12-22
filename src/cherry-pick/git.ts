@@ -84,6 +84,18 @@ export async function getPullRequestDiff(octokit: Octokit, prNumber: number, asP
   return diff as unknown as string
 }
 
+export async function getMergeBase(octokit: Octokit, commitA: string, commitB: string): Promise<string> {
+  const { data: data } = await octokit.request('GET /repos/{owner}/{repo}/compare/{basehead}', {
+    ...github.context.repo,
+    basehead: `${commitA}...${commitB}`,
+    headers: {
+      'X-GitHub-Api-Version': '2022-11-28'
+    }
+  })
+
+  return data.merge_base_commit.sha
+}
+
 export async function disableMergeConflictHint(): Promise<void> {
   await exec('git', ['config', 'advice.mergeConflict', 'false'])
 }

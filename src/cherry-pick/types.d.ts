@@ -19,4 +19,5 @@ export interface CherryPickOptions {
 
 export type CherryPickResult = {
   branch: string
+  strategy: MergeStrategy
 }
