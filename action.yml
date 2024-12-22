@@ -19,9 +19,23 @@ inputs:
     description: 'The GitHub token'
     required: true
     default: ${{ github.token }}
+  git_user_name:
+    description: 'The git user name for commit'
+    required: false
+  git_user_email:
+    description: 'The git user email for commit'
+    required: false
+  pull_request_template:
+    description: >
+      The pull request template If provided, the action will create a pull request with the template If not provided, the action will not
+      create a pull request
 
 # Define your outputs here.
-outputs: {}
+outputs:
+  branch:
+    description: 'The branch name which the PR is cherry-picked to'
+  pr:
+    description: 'The PR number which the action creates'
 
 runs:
   using: node20

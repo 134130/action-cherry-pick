@@ -1,23 +1,27 @@
-# Create a GitHub Action Using TypeScript
+# Cherry Pick your Pull Request to Target branch automatically
 
-[![GitHub Super-Linter](https://github.com/134130/action-cherry-pick/actions/workflows/linter.yml/badge.svg)](https://github.com/super-linter/super-linter)
-![CI](https://github.com/134130/action-cherry-pick/actions/workflows/ci.yml/badge.svg)
-[![Check dist/](https://github.com/134130/action-cherry-pick/actions/workflows/check-dist.yml/badge.svg)](https://github.com/134130/action-cherry-pick/actions/workflows/check-dist.yml)
-[![CodeQL](https://github.com/134130/action-cherry-pick/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/134130/action-cherry-pick/actions/workflows/codeql-analysis.yml)
-[![Coverage](./badges/coverage.svg)](./badges/coverage.svg)
+The action will cherry-pick the pull request to the target branch automatically.
 
 ## Usage
 
 ```yaml
-steps:
-  - name: Checkout
-    id: checkout
-    uses: actions/checkout@v4
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: 'Pull Request number'
+        required: true
+      target:
+        description: 'Target branch'
+        required: true
 
-  - name: Test Local Action
-    id: test-action
-    uses: 134130/action-cherry-pick@v1
+steps:
+  - uses: actions/checkout@v4
+
+  - uses: .github/actions/cherry-pick@develop
     with:
-      pr: 100
-      onto: release-1.0
+      pr: ${{ github.event.pull_request.number }}
+      target: release/10.2.2
 ```

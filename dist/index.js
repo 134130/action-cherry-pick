@@ -29898,26 +29898,30 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 3190:
+/***/ 4156:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.exec = exec;
+exports.execWithOutput = execWithOutput;
 const exec_1 = __nccwpck_require__(5236);
 async function exec(commandLine, args, options) {
-    const output = await (0, exec_1.getExecOutput)(commandLine, args, options);
+    const output = await (0, exec_1.getExecOutput)(commandLine, args, { ...options, ignoreReturnCode: true });
     if (output.exitCode !== 0) {
-        throw new Error(`Failed to run ${commandLine}: ${output.stderr}`);
+        throw new Error(output.stderr);
     }
     return output.stdout;
+}
+async function execWithOutput(commandLine, args, options) {
+    return await (0, exec_1.getExecOutput)(commandLine, args, { ...options, ignoreReturnCode: true });
 }
 
 
 /***/ }),
 
-/***/ 1243:
+/***/ 405:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -29964,12 +29968,14 @@ exports.fetch = fetch;
 exports.checkoutNewBranch = checkoutNewBranch;
 exports.inspectPullRequestMergeStrategy = inspectPullRequestMergeStrategy;
 exports.getPullRequestDiff = getPullRequestDiff;
+exports.disableMergeConflictHint = disableMergeConflictHint;
 exports.applyPatch = applyPatch;
 exports.cherryPick = cherryPick;
 exports.push = push;
+exports.configureGitUser = configureGitUser;
 const fs = __importStar(__nccwpck_require__(9896));
 const github = __importStar(__nccwpck_require__(3228));
-const exec_1 = __nccwpck_require__(3190);
+const exec_1 = __nccwpck_require__(4156);
 async function isDirty() {
     const output = await (0, exec_1.exec)('git', ['status', '--porcelain']);
     return output.trim().length > 0;
@@ -29994,7 +30000,8 @@ async function fetch(remote, refspec) {
     await (0, exec_1.exec)('git', ['fetch', '--recurse-submodules', remote, refspec]);
 }
 async function checkoutNewBranch(newBranch, startPoint) {
-    await (0, exec_1.exec)('git', ['checkout', newBranch, startPoint]);
+    await (0, exec_1.exec)('git', ['checkout', '--recurse-submodules', '-b', newBranch, startPoint]);
+    await (0, exec_1.exec)('git', ['reset', '--hard', startPoint]);
 }
 async function inspectPullRequestMergeStrategy(octokit, prNumber) {
     const pull = await getPullRequest(octokit, prNumber);
@@ -30028,14 +30035,165 @@ async function getPullRequestDiff(octokit, prNumber, asPatch) {
     });
     return diff;
 }
+async function disableMergeConflictHint() {
+    await (0, exec_1.exec)('git', ['config', 'advice.mergeConflict', 'false']);
+}
 async function applyPatch(patch) {
-    await (0, exec_1.exec)('git', ['am', '-3'], { input: Buffer.from(patch, 'utf8') });
+    const result = await (0, exec_1.execWithOutput)('git', ['apply', '-3'], { input: Buffer.from(patch, 'utf8') });
+    if (result.exitCode === 0) {
+        return;
+    }
+    if (result.exitCode === 1 && /^CONFLICT/m.test(result.stdout)) {
+        throw new Error('Failed to apply patch due to merge conflict');
+    }
+    throw new Error(`Failed to apply patch: ${result.stdout}`);
 }
 async function cherryPick(commit) {
-    await (0, exec_1.exec)('git', ['cherry-pick', commit]);
+    const result = await (0, exec_1.execWithOutput)('git', ['cherry-pick', '--keep-redundant-commits', commit]);
+    if (result.exitCode === 0) {
+        return;
+    }
+    if (result.exitCode === 1 && /^CONFLICT/m.test(result.stdout)) {
+        throw new Error('Failed to cherry-pick due to merge conflict');
+    }
+    throw new Error(`Failed to cherry-pick: ${result.stdout}`);
 }
 async function push(upstream, ref) {
     await (0, exec_1.exec)('git', ['push', '--set-upstream', upstream, ref]);
+}
+async function configureGitUser(name, email) {
+    await (0, exec_1.exec)('git', ['config', 'user.name', name]);
+    await (0, exec_1.exec)('git', ['config', 'user.email', email]);
+}
+
+
+/***/ }),
+
+/***/ 1049:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.cherryPick = cherryPick;
+const core = __importStar(__nccwpck_require__(7484));
+const github = __importStar(__nccwpck_require__(3228));
+const git = __importStar(__nccwpck_require__(405));
+const util = __importStar(__nccwpck_require__(7416));
+async function cherryPick(options) {
+    core.info(`🍒 Cherry-picking #${options.pullNumber} onto '${options.targetBranch}'`);
+    const octokit = github.getOctokit(options.token);
+    await util.runStep('Check if the git is dirty', async () => {
+        const dirty = await git.isDirty();
+        if (dirty) {
+            throw new Error('Repository is dirty. Please commit or stash your changes before running this action.');
+        }
+    });
+    await util.runStep('Check if the git is in a rebase or am', async () => {
+        const isInRebaseOrAm = await git.isInRebaseOrAm();
+        if (isInRebaseOrAm) {
+            throw new Error('Repository is in a rebase or am. Please finish the rebase or am before running this action.');
+        }
+    });
+    let pull;
+    await util.runStep(`Check the PR #${options.pullNumber}`, async () => {
+        pull = await git.getPullRequest(octokit, options.pullNumber);
+        core.info(`    Number: ${pull.number}`);
+        core.info(`     Title: ${pull.title}`);
+        core.info(`    Author: ${pull.user.login} (${pull.user.email})`);
+        const state = pull.merged ? 'merged' : pull.draft ? 'draft' : pull.state;
+        core.info(`     State: ${state}`);
+        if (state !== 'merged') {
+            throw new Error(`PR is not merged. Please merge the PR before running this action.`);
+        }
+    });
+    const cherryPickBranchName = `cherry-pick-pr-${options.pullNumber}-onto-${options.targetBranch}-${Date.now()}`;
+    await util.runStep('Checkout branch', async () => {
+        await git.fetch('origin', options.targetBranch);
+        await git.checkoutNewBranch(cherryPickBranchName, `origin/${options.targetBranch}`);
+    });
+    let mergeStrategy;
+    await util.runStep('Determine merge strategy', async () => {
+        if (options.mergeStrategy !== undefined) {
+            mergeStrategy = options.mergeStrategy;
+            core.info(`    Use user configured merge strategy: '${mergeStrategy}'`);
+            return;
+        }
+        mergeStrategy = await git.inspectPullRequestMergeStrategy(octokit, options.pullNumber);
+        core.info(`    The merge strategy is determined as '${mergeStrategy}'`);
+    });
+    await util.runStep('Configure git user', async () => {
+        let gitUsername;
+        let gitEmail;
+        if (options.git !== undefined) {
+            gitUsername = options.git.username;
+            gitEmail = options.git.email;
+            core.info(`    Use user configured git config: ${gitUsername} ${gitEmail}`);
+        }
+        else {
+            gitUsername = 'github-actions[bot]';
+            gitEmail = '41898282+github-actions[bot]@users.noreply.github.com';
+            core.info(`    User not configured the git config. Use github-actions[bot]`);
+        }
+        await git.configureGitUser(gitUsername, gitEmail);
+        await git.disableMergeConflictHint();
+    });
+    switch (mergeStrategy) {
+        case 'rebase':
+            await util.runStep('Rebase the PR', async () => {
+                const diff = await git.getPullRequestDiff(octokit, options.pullNumber, true);
+                await git.applyPatch(diff);
+            });
+            break;
+        case 'squash':
+            await util.runStep('Cherry-pick the PR', async () => {
+                const mergeCommitSha = pull.merge_commit_sha;
+                await git.fetch('origin', mergeCommitSha);
+                await git.cherryPick(mergeCommitSha);
+            });
+            break;
+    }
+    if (options.push) {
+        await util.runStep('Push the branch', async () => {
+            await git.push('origin', cherryPickBranchName);
+        });
+    }
+    return {
+        branch: cherryPickBranchName
+    };
 }
 
 
@@ -30083,130 +30241,135 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = run;
 const core = __importStar(__nccwpck_require__(7484));
 const github = __importStar(__nccwpck_require__(3228));
-const git = __importStar(__nccwpck_require__(1243));
-const process_1 = __nccwpck_require__(932);
+const cherry_pick_1 = __nccwpck_require__(1049);
+const util = __importStar(__nccwpck_require__(7416));
 async function run() {
-    const pr = Number.parseInt(core.getInput('pr', { required: true }));
-    const onto = core.getInput('onto', { required: true });
-    const token = core.getInput('token', { required: true });
-    core.info(`🍒 Cherry-picking PR #${pr} onto ${onto}`);
-    const octokit = github.getOctokit(token);
-    await core.group('🍒 Checking if the repository is dirty ...', async () => {
-        try {
-            const dirty = await git.isDirty();
-            if (dirty) {
-                core.setFailed('Repository is dirty. Please commit or stash your changes before running this action.');
-                (0, process_1.exit)(1);
-            }
-            core.info('Repository is not dirty');
-        }
-        catch (error) {
-            core.setFailed(`Failed to check if the repository is dirty: ${error.message})`);
-            (0, process_1.exit)(1);
-        }
-    });
-    await core.group('🍒 Checking if the repository is in a rebase or am ...', async () => {
-        try {
-            const inRebaseOrAm = await git.isInRebaseOrAm();
-            if (inRebaseOrAm) {
-                core.setFailed('Repository is in a rebase or am. Please finish the rebase or am before running this action.');
-                (0, process_1.exit)(1);
-            }
-            core.info('Repository is not in a rebase or am');
-        }
-        catch (error) {
-            core.setFailed(`Failed to check if the repository is in a rebase or am: ${error.message})`);
-            (0, process_1.exit)(1);
-        }
-    });
-    let pull;
-    await core.group(`🍒 Fetching the PR #${pr} ...`, async () => {
-        try {
-            core.info(`owner: ${github.context.repo.owner}`);
-            core.info(`repo: ${github.context.repo.repo}`);
-            pull = await git.getPullRequest(octokit, pr);
-        }
-        catch (error) {
-            core.setFailed(`Failed to fetch the PR branch: ${error.message})`);
-            (0, process_1.exit)(1);
-        }
-        core.info(`Fetched PR ${pull.title} (#${pr}) by ${pull.user.login} (branch=${pull.head.ref})`);
-    });
-    if (pull.merged !== true) {
-        const currentState = pull.draft ? 'draft' : pull.state;
-        core.setFailed(`PR #${pr} is not merged (current: ${currentState}). Please merge the PR before running this action.`);
-        (0, process_1.exit)(1);
+    const pr = Number.parseInt(core.getInput('pr', { required: true, trimWhitespace: true }));
+    const onto = core.getInput('onto', { required: true, trimWhitespace: true });
+    const token = core.getInput('token', { required: true, trimWhitespace: true });
+    const gitUserName = core.getInput('git_user_name', { required: false, trimWhitespace: true });
+    const gitUserEmail = core.getInput('git_user_email', { required: false, trimWhitespace: true });
+    const pullRequestTemplate = core.getInput('pull_request_template', { required: false });
+    const cherryPickOptions = {
+        pullNumber: pr,
+        targetBranch: onto,
+        token: token,
+        push: true
+    };
+    if (gitUserName && gitUserEmail) {
+        cherryPickOptions.git = {
+            username: gitUserName,
+            email: gitUserEmail
+        };
     }
-    await core.group('🍒 Fetching the target branch ...', async () => {
-        try {
-            await git.fetch('origin', onto);
-        }
-        catch (error) {
-            core.setFailed(`Failed to fetch the target branch: ${error.message})`);
-            (0, process_1.exit)(1);
-        }
-    });
-    const cherryPickBranchName = `cherry-pick-pr-${pr}-onto-${onto}-${Date.now()}`;
-    core.info(`🍒 The branch name is ${cherryPickBranchName}`);
-    await core.group('🍒 Checking out branch ...', async () => {
-        try {
-            await git.checkoutNewBranch(cherryPickBranchName, onto);
-        }
-        catch (error) {
-            core.setFailed(`Failed to checkout the branch: ${error.message})`);
-            (0, process_1.exit)(1);
-        }
-    });
-    let mergeStrategy;
-    await core.group('🍒 Determining the merge strategy ...', async () => {
-        try {
-            mergeStrategy = await git.inspectPullRequestMergeStrategy(octokit, pr);
-            core.info(`The merge strategy of the PR #${pr} is inspected as ${mergeStrategy}`);
-        }
-        catch (error) {
-            core.setFailed(`Failed to determine the merge strategy: ${error.message})`);
-            (0, process_1.exit)(1);
-        }
-    });
-    core.info(`🍒 The merge strategy is determined as ${mergeStrategy}`);
-    switch (mergeStrategy) {
-        case 'rebase':
-            await core.group('🍒 Rebasing the PR ...', async () => {
-                try {
-                    core.info('Fetching the PR diff ...');
-                    const diff = await git.getPullRequestDiff(octokit, pr, true);
-                    core.info('PR diff fetched');
-                    core.info('Applying the PR diff ...');
-                    await git.applyPatch(diff);
-                    core.info('PR diff applied');
-                }
-                catch (error) {
-                    core.setFailed(`Failed to rebase the PR: ${error.message})`);
-                }
+    const { branch } = await (0, cherry_pick_1.cherryPick)(cherryPickOptions);
+    if (pullRequestTemplate) {
+        await util.runStep('Create pull request', async () => {
+            const octokit = github.getOctokit(token);
+            const index = pullRequestTemplate.indexOf('\n');
+            const title = pullRequestTemplate.substring(0, index);
+            const body = pullRequestTemplate.substring(index + 1);
+            const { data: pull } = await octokit.rest.pulls.create({
+                ...github.context.repo,
+                head: branch,
+                base: onto,
+                title: title,
+                body: body
             });
-            break;
-        case 'squash':
-            await core.group('🍒 Cherry-picking the PR ...', async () => {
-                try {
-                    await git.cherryPick(pull.merge_commit_sha);
-                }
-                catch (error) {
-                    core.setFailed(`Failed to cherry-pick the PR: ${error.message})`);
-                }
+            await octokit.rest.issues.addLabels({
+                ...github.context.repo,
+                issue_number: pull.number,
+                labels: ['cherry-pick']
             });
-            break;
+            await octokit.rest.issues.addAssignees({
+                ...github.context.repo,
+                issue_number: pull.number,
+                assignees: [github.context.actor]
+            });
+            core.setOutput('pr', pull.number.toString());
+        });
     }
-    await core.group('🍒 Pushing the branch ...', async () => {
-        try {
-            await git.push('origin', cherryPickBranchName);
-        }
-        catch (error) {
-            core.setFailed(`Failed to push the branch: ${error.message})`);
-            (0, process_1.exit)(1);
-        }
-    });
-    core.info(`🍒 Cherry-picked PR #${pr} onto ${onto}`);
+    core.setOutput('branch', branch);
 }
+
+
+/***/ }),
+
+/***/ 3745:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.runStep = runStep;
+const core = __importStar(__nccwpck_require__(7484));
+const process = __importStar(__nccwpck_require__(1708));
+async function runStep(name, fn) {
+    await core.group(`🍒 ${name} ...`, async () => {
+        await fn().catch(error => {
+            core.setFailed(error.message);
+            process.exit(1);
+        });
+    });
+}
+
+
+/***/ }),
+
+/***/ 7416:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+__exportStar(__nccwpck_require__(3745), exports);
 
 
 /***/ }),
@@ -30323,6 +30486,14 @@ module.exports = require("node:events");
 
 /***/ }),
 
+/***/ 1708:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:process");
+
+/***/ }),
+
 /***/ 7075:
 /***/ ((module) => {
 
@@ -30360,14 +30531,6 @@ module.exports = require("path");
 
 "use strict";
 module.exports = require("perf_hooks");
-
-/***/ }),
-
-/***/ 932:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("process");
 
 /***/ }),
 
